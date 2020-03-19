@@ -1,0 +1,79 @@
+{
+   "AWSTemplateFormatVersion": "2010-09-09",
+   "Resources" : {
+      "SimpleConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+         "ImageId" : "ami-0cb790308f7591fa6",
+         "InstanceType" : "t2.small"
+      }
+      },
+      "MyServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+         "AvailabilityZones" : ["eu-west-2a"],
+         "LaunchConfigurationName" : { "Ref" : "SimpleConfig" },
+         "MinSize" : "2",
+         "MaxSize" : "10"
+      }
+      },
+      "MyServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "MyServerGroup" },
+        "Cooldown" : "600",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "MyServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "MyServerGroup" },
+        "Cooldown" : "600",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+    "CPUAlarmHigh": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 90% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "20",
+        "AlarmActions": [ { "Ref": "MyServerScaleUpPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "MyServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+    "CPUAlarmLow": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 70% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "7",
+        "AlarmActions": [ { "Ref": "MyServerScaleDownPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "MyServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold"
+      }
+    }
+   }
+}
